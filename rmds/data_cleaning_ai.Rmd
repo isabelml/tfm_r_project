@@ -1,0 +1,84 @@
+---
+title: "Data cleaning (AI news database)"
+subtitle: "Trabajo Fin de Master"
+author: "Isabel Molero López"
+date: "Sys.Date()"
+output: html_notebook
+  toc: true
+---
+
+# 1. Introduction
+
+This file is the second part of a series of rmds that I am doing for my Master's 
+Thesis. In the previous one ("web-scraping AI articles) I extracted the content 
+of newspaper articles in a csv. Now I am going to read the csv and clean the data
+to be able to perform visualizations and text analysis.
+
+# 2. Load libraries
+
+```{r message=FALSE}
+library(tidyverse)
+library(lubridate)
+```
+
+
+# 3. Import data
+
+```{r message=FALSE}
+ai_eldiario_row <- read_csv("../data/eldiario_news2.csv") %>%
+  filter(!duplicated(link))
+
+ai_elmundo_row <- read_csv("../data/elmundo_news2.csv") %>%
+  filter(!duplicated(link)) %>% 
+  filter(!duplicated(title)) %>% 
+  mutate(link = str_replace(link, "//www.elmundo.es/economia/innovadores/2019/02/19/5c6ae9b721efa0fb378b46d4.html", "https://www.elmundo.es/economia/innovadores/2019/02/19/5c6ae9b721efa0fb378b46d4.html")) %>% 
+  mutate(link = str_replace(link, "^//", "https://")) %>% 
+  filter(!is.na(title))
+
+text_eldiario_row <- read_csv("../data/eldiario_text2.csv") %>%
+  filter(!duplicated(link))
+
+text_elmundo_row <- read_csv("../data/elmundo_text2.csv") %>%
+  filter(!duplicated(link))
+```
+
+# 4. Merge dataframes
+
+```{r}
+eldiario_all_row <- ai_eldiario_row %>% 
+  full_join(text_eldiario_row, by = "link")
+
+elmundo_all_row <- ai_elmundo_row %>% 
+  full_join(text_elmundo_row, by = "link")
+```
+
+Now I am going to remove the dataframe that I am not going to use
+
+```{r}
+rm(st = ai_eldiario_row, ai_elmundo_row, text_eldiario_row, text_elmundo_row)
+```
+
+
+# 5. Data cleaning
+
+## Date
+
+```{r}
+eldiario_all <- eldiario_all_row %>%
+  mutate(date = str_split(date, " - ", simplify = TRUE)[, 1]) %>%
+  separate(date, into = c("day", "month", "year"), sep = " de ") %>%
+  mutate(date = dmy(paste(day, month, year)),
+         date = ymd(date)) %>%
+  select(-day, -month, -year)
+```
+
+```{r}
+elmundo_all <- elmundo_all_row %>%
+  mutate(date = str_sub(date, start = 1, end = 10),
+         date = ymd(date))
+
+elmundo_all <- elmundo_all_row %>% 
+  mutate(date = ymd_hms(date, tz = "UTC"),
+         date = ymd(format(date, "%Y-%m-%d")))
+```
+

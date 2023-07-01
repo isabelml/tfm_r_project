@@ -1,0 +1,143 @@
+---
+title: "tfm web scrapping old"
+output: html_notebook
+---
+
+## Dataframe with the content of the articles (2)
+
+Now to do text analysis I need to extract the content of each article. To do this
+I need to create a loop which first navigate into the original link (*link_eldiario*
+and *link_elmundo*), and then navigate to each news item and extract the text of 
+the news item. In addition, as in the previous loop it will be necessary that 
+once the information is extracted from the first page of the search the remote 
+browser switches to the next one and repeats the process, and so on until the 
+last one is reached. 
+
+### Find the XPath of the article text
+
+#### elDiario.es
+
+```{r}
+knitr::include_graphics("article_text.jpg")
+```
+
+**Click on the first article and read the html**
+
+```{r}
+remDr$findElement("xpath", "//a[@class = 'WlydOe']")$clickElement()
+remDr$screenshot(display = T)
+
+Sys.sleep(2)
+
+page_source <- remDr$getPageSource()[[1]]
+html_new <- read_html(page_source)
+```
+
+**Find the XPath**
+
+```{r}
+text <- html_new %>% 
+  xml_find_all("//p[@class = 'article-text']") %>% 
+  xml_text()
+
+text <- paste(text, collapse = "")
+text
+```
+**Find the button to accept cookies in eldiario.es**
+
+```{r}
+knitr::include_graphics("cookies_eldiario.jpg")
+```
+
+
+**Create the loop**
+
+I need to stop the Docker and then run it again:
+
+```{r}
+remDr <- RSelenium::remoteDriver(remoteServerAddr = "localhost",
+                                 port = 4445L,
+                                 browserName = "firefox")
+
+remDr$open()
+```
+
+```{r}
+remDr$navigate(link_eldiario)
+Sys.sleep(2)
+#remDr$screenshot(display = T)
+
+remDr$findElement(using = "xpath", value = "//button")$clickElement()
+Sys.sleep(2)
+remDr$screenshot(display = TRUE)
+```
+
+```{r}
+eldiario_df <- data.frame(text = character())
+
+page_source <- remDr$getPageSource()[[1]]
+Sys.sleep(2)
+html <- read_html(page_source)
+Sys.sleep(2)
+
+# List with the links of each article
+hrefs <- html %>% 
+  xml_find_all("//a[@class = 'WlydOe']") %>% 
+  xml_attr("href")
+
+# Create a vector with each XPath
+xpaths <- paste0("//a[@class = 'WlydOe' and @href='", hrefs, "']")
+
+# Accept cookies
+remDr$findElement(using = "xpath", value = xpaths[1])$clickElement()
+Sys.sleep(2)
+
+remDr$findElement(using = "xpath", value = "//button[@id =
+                    'didomi-notice-agree-button']")$clickElement()
+Sys.sleep(2)
+remDr$goBack()
+Sys.sleep(2)
+
+remDr$screenshot(display = T)
+```
+
+
+```{r}
+# Click on each xpath
+
+for (xpath in xpaths) {
+  
+  remDr$findElement(using = "xpath", value = xpath)$clickElement()
+  # Sys.sleep(5)
+  #remDr$screenshot(display = T) 
+  
+  # Extract the text
+  page_source <- remDr$getPageSource()[[1]]
+  # Sys.sleep(5)
+  html <- read_html(page_source)
+  
+  text <- html %>% 
+  xml_find_all("//p[@class = 'article-text']") %>% 
+  xml_text()
+  
+  text <- paste(text, collapse = "")
+  eldiario_df <- rbind(eldiario_df, data.frame(text = text))
+  gc()
+  
+  # Sys.sleep(5)
+  remDr$goBack()
+  
+  # Sys.sleep(5)
+  # remDr$screenshot(display = T)
+
+}
+
+```
+
+
+#### elmundo.es
+
+```{r}
+
+```
+
