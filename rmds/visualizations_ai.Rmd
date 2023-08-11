@@ -1,0 +1,38 @@
+---
+title: "visualizations_ai"
+author: "Isabel Molero López"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# 1. Introduction
+
+# 2. Load libraries
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+# 3. Read data
+```{r}
+eldiario_all <- read_csv("../data/eldiario_all.csv")
+elmundo_all <- read_csv("../data/elmundo_all.csv")
+```
+# 4. Line graph: number of news articles published over time
+
+```{r}
+eldiario_all$year_month <- format(eldiario_all$date, "%Y-%m")
+
+month_count <- eldiario_all %>%
+  group_by(year_month) %>%
+  summarize(no_articles = n())
+
+ggplot(month_count, aes(x = year_month, y = no_articles, group = 1)) +
+  geom_line() +
+  scale_x_discrete(labels = scales::date_format("%Y-%m")) +
+  labs(x = "Año-Mes", y = "Número de Noticias", title = "Número de Noticias Publicadas por Año-Mes") +
+  theme_minimal()
+```
+

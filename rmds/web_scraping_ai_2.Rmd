@@ -18,7 +18,7 @@ information from *eldiario.es* and *elmundo.es* and save it in a csv.
 
 First I am going to load the R libraries I will use:
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 # General libraries:
 library(tidyverse)
 
@@ -64,7 +64,8 @@ of each news item are as follows:
 
 To identify the person who is scraping the website I have to set my user-agent. 
 This string contains information about my computer/browser and my name/email to 
-make identification easier.
+make identification easier. **If you are executing this code you have to save**
+**here your own data (name / email address)**
 
 ```{r}
 set_config(
@@ -75,7 +76,7 @@ set_config(
 
 # 5. Find the xpath for each article
 
-Next I will look for the xpath where each news item is located in the link. Keep 
+Next I will look for the Xpath where each news item is located in the link. Keep 
 in mind that on the Google News webpage the hyperlinks to each news item are 
 spread over several pages. On each page there are 10 articles, and at the bottom 
 you can click on a "next" button or directly click on the page number you want to
@@ -499,6 +500,7 @@ Mundo. To do this I have followed very similar steps to those shown above.
 ```{r}
 remDr$open()
 ```
+
 ```{r}
 # Navigate:
 link_eldiario2 <- "https://www.eldiario.es/busqueda/%22inteligencia%20artificial%22"
@@ -568,11 +570,17 @@ df2_eldiario <- data.frame(title, date, link)
 
 ## Save the dataframe in a csv file
 
+Now I have a dataframe "eldiario_news2.csv" with the title, the date and the
+link of each new. 
+
 ```{r}
 write_csv(df2_eldiario, "../data/eldiario_news2.csv")
 ```
 
 # 11. News from elmundo.es search engine
+
+I am going to repeat the same process for the news from "El Mundo" digital
+newspaper.
 
 ```{r}
 remDr$open()
@@ -588,7 +596,6 @@ Sys.sleep(2)
 remDr$findElement(using = "xpath", value = "//button[@id =
                     'didomi-notice-agree-button']")$clickElement()
 Sys.sleep(2)
-
 ```
 
 
@@ -644,6 +651,8 @@ while (continue_loop) {
 df2_elmundo <- do.call(rbind, df_list) 
 ```
 
+Now I save the dataframe with the title and the link of each new ("elmundo_news2").
+
 ```{r}
 write_csv(df2_elmundo, "../data/elmundo_news2.csv")
 ```
@@ -655,17 +664,20 @@ create another loop to extract the text of the news item from each link.
 
 First I create a vector with the links of each article: 
 
-```{r}
+```{r warning=FALSE, message=FALSE}
+# Read both dataframes:
 df2_eldiario <- read_csv("../data/eldiario_news2.csv") %>% 
-  filter(!duplicated(link))
+  filter(!duplicated(link)) # I remove duplicated links. 
 
 df2_elmundo <- read_csv("../data/elmundo_news2.csv") %>% 
   filter(!duplicated(link))
 
+# Create the vector:
 links <- df2_eldiario$link
 ```
 
 ```{r}
+# Open RSelenium Driver
 remDr$open()
 ```
 
@@ -750,7 +762,7 @@ parts that are in charge of checking that the information has been extracted
 from the html and that, in case the link is broken, it continues with the next 
 one and does not stop. 
 
-```{r}
+```{r warning=FALSE}
 df2_elmundo <- read_csv("../data/elmundo_news2.csv")
 
 df2_elmundo <- df2_elmundo  %>% 
@@ -819,35 +831,108 @@ for (link in links) {
 
 ```
 
-```{r}
+# 13. Save the dataframes in a csv file
+
+```{r message=FALSE, warning=FALSE}
 elmundo_df <- read_csv("../data/elmundo_text2.csv")
 df2_elmundo <- read_csv("../data/elmundo_news2.csv")
+```
+
+# 14. Check for NAs in El Mundo news dataframe
+
+I have realized that fore some rows in the dataframe there is no text. So I am going
+to check what is happening. It looks like that for some old news the XPath for the 
+article text is different, so I need to change the code to extract that text. 
+
+```{r}
+# Create new dataframe with the news with NAs in the "text" value
+nas_elmundo_df <- elmundo_df %>% 
+  filter(!duplicated(link)) %>% 
+  filter(is.na(text))
+
+# Create a vector with the links
+links <- nas_elmundo_df$link
+```
+
+## Find the XPath
+
+```{r}
+link_prueba <- "https://www.elmundo.es/tecnologia/2018/08/20/5b7abcc4ca4741df698b45b8.html"
+
+html <- read_html(link_prueba)
+
+text <- html %>% 
+      xml_find_all("//div[@itemprop='articleBody']//p") %>% 
+      xml_text() %>% 
+      str_remove("Conforme a los criterios de") 
+    
+text <- paste(text, collapse = "")
+text
+```
+
+## Create a new loop to extract the text that is missing
+
+```{r}
+
+# Create an empty dataframe to store the data
+elmundo_df_nas <- data.frame(text = character(),
+                         date = character(),
+                         link = character(),
+                         stringsAsFactors = FALSE)
+
+# Iterate through each link
+for (link in links) {
+  Sys.sleep(1)
+  print(link)
+  tryCatch({
+    # Read the HTML from the link
+    html <- read_html(link)
+    
+    # Extract the text
+    text <- html %>% 
+      xml_find_all("//div[@itemprop='articleBody']//p") %>% 
+      xml_text() %>% 
+      str_remove("Conforme a los criterios de") 
+    
+    text <- paste(text, collapse = "")
+    
+    # Extract date2
+    date <- html %>% 
+      xml_find_all("//time") %>% 
+      xml_attr("datetime")
+    
+    # Check if any data was extracted
+    if (length(text) > 0 & length(date) > 0) {
+      # Create a new row with the extracted information
+      new_row <- data.frame(text = text,
+                            date = date,
+                            link = link,
+                            stringsAsFactors = FALSE)
+      
+      # Append the new row to the result dataframe
+      elmundo_df_nas <- rbind(elmundo_df_nas, new_row)
+    }
+  }, error = function(e) {
+    # Handle HTTP error 404
+    if (grepl("HTTP error 404", e$message)) {
+      warning(paste("HTTP error 404 occurred for link:", link))
+    } else {
+      stop(e)
+    }
+  })
+}
 
 ```
 
-
-# 13. Merge both dataframes
-
 ```{r}
-write_csv(eldiario_df, "../data/eldiario_text2.csv")
-write_csv(elmundo_df, "../data/elmundo_text2.csv")
-
-eldiario_df_all <- eldiario_df %>% 
-  full_join(df2_eldiario, by = "link")
-
-elmundo_df_all <- elmundo_df %>% 
-  full_join(df2_elmundo, by = "link") %>% 
-  filter(!duplicated(title))
-  
+# Remove duplicated rows
+elmundo_df_nas <- elmundo_df_nas %>% 
+  filter(!duplicated(link))
 ```
 
-# 14. Save the dataframes in a csv
-
 ```{r}
-write_csv(eldiario_df, "eldiario_news.csv")
-write_csv(elmundo_df_all, "../data/elmundo_news_all.csv")
-
-a <- read_csv("../data/eldiario_text2.csv")
+# save the dataframe
+write_csv(elmundo_df_nas, "../data/elmundo_df_nas.csv")
 ```
 
 

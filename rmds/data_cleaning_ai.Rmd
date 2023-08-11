@@ -1,6 +1,6 @@
 ---
 title: "Data cleaning (AI news database)"
-subtitle: "Trabajo Fin de Master"
+subtitle: "Master Thesis"
 author: "Isabel Molero López"
 date: "Sys.Date()"
 output: html_notebook
@@ -52,10 +52,29 @@ elmundo_all_row <- ai_elmundo_row %>%
   full_join(text_elmundo_row, by = "link")
 ```
 
-Now I am going to remove the dataframe that I am not going to use
+Now I am going to remove the dataframes that I am not going to use.
 
 ```{r}
 rm(st = ai_eldiario_row, ai_elmundo_row, text_eldiario_row, text_elmundo_row)
+```
+## join with the dataframe with the NAs
+```{r}
+# read the dataframe
+elmundo_df_nas <- read_csv("../data/elmundo_df_nas.csv")
+
+# split
+elmundo_all_row_nas <- elmundo_all_row %>% 
+  filter(is.na(text)) %>% 
+  select(title, link, date) %>% 
+  left_join(elmundo_df_nas %>% select(text, link), by = "link")
+
+# join both dataframes
+elmundo_all_row <- elmundo_all_row %>% 
+  filter(!is.na(text)) %>% 
+  bind_rows(elmundo_all_row_nas)
+
+# remove useless df from the environment
+rm(elmundo_all_row_nas, elmundo_df_nas)
 ```
 
 
@@ -72,13 +91,23 @@ eldiario_all <- eldiario_all_row %>%
   select(-day, -month, -year)
 ```
 
-```{r}
+```{r warning=FALSE}
+# First I extract the first 10 characters of the column "date" which correspond
+# with the date in yyyy-mm-dd format:
+
 elmundo_all <- elmundo_all_row %>%
   mutate(date = str_sub(date, start = 1, end = 10),
          date = ymd(date))
 
+# There are days which are wrong, i.e: "2013-50-18"
 elmundo_all <- elmundo_all_row %>% 
   mutate(date = ymd_hms(date, tz = "UTC"),
          date = ymd(format(date, "%Y-%m-%d")))
+```
+# 6. Save the dataframes
+
+```{r}
+write_csv(eldiario_all, "../data/eldiario_all.csv")
+write_csv(elmundo_all, "../data/elmundo_all.csv")
 ```
 
