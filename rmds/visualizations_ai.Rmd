@@ -8,31 +8,121 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 # 1. Introduction
 
 # 2. Load libraries
-```{r}
+```{r message=FALSE}
 library(tidyverse)
 library(ggplot2)
 ```
+
 # 3. Read data
-```{r}
+```{r message=FALSE}
 eldiario_all <- read_csv("../data/eldiario_all.csv")
 elmundo_all <- read_csv("../data/elmundo_all.csv")
 ```
+
 # 4. Line graph: number of news articles published over time
+
+## Create a column with the month and year
 
 ```{r}
 eldiario_all$year_month <- format(eldiario_all$date, "%Y-%m")
+elmundo_all$year_month <- format(elmundo_all$date, "%Y-%m")
+```
 
-month_count <- eldiario_all %>%
-  group_by(year_month) %>%
-  summarize(no_articles = n())
+## Filter only the articles which contains in the text the words "inteligencia artificial"
 
-ggplot(month_count, aes(x = year_month, y = no_articles, group = 1)) +
-  geom_line() +
-  scale_x_discrete(labels = scales::date_format("%Y-%m")) +
-  labs(x = "Año-Mes", y = "Número de Noticias", title = "Número de Noticias Publicadas por Año-Mes") +
-  theme_minimal()
+```{r}
+eldiario_all_filter <- eldiario_all %>% 
+  filter(str_detect(text, regex("inteligencia artificial", ignore_case = TRUE)))
+
+elmundo_all_filter <- elmundo_all %>% 
+  filter(str_detect(text, regex("inteligencia artificial", ignore_case = TRUE))) %>% 
+  filter(!is.na(date)) # remove NAs in the column "date"
+```
+
+## Clean dates
+
+Now I am going to set the same minimum and maximum date of publication of 
+articles for both datasets:
+
+```{r}
+min(eldiario_all_filter$date)
+min(elmundo_all_filter$date)
+
+max(eldiario_all_filter$date)
+max(elmundo_all_filter$date)
+```
+```{r}
+eldiario_all_filter <- eldiario_all_filter %>% 
+  filter(date >= "2014-07-28") %>% 
+  filter(date <= "2023-04-30")
+
+elmundo_all_filter <- elmundo_all_filter %>% 
+  filter(date <= "2023-04-30")
+```
+
+## Join both dataframes
+
+```{r}
+final_df <- eldiario_all_filter %>% 
+  mutate(newspaper = "elDiario.es") %>% 
+  bind_rows(elmundo_all_filter %>%
+              mutate(newspaper = "elmundo.es")) 
+```
+
+
+## Plot:
+
+```{r}
+library(RColorBrewer)
+
+# Supongamos que tu dataframe se llama 'final_df'
+# Asegúrate de que 'year_month' sea de tipo Date o POSIXct para poder realizar operaciones con fechas correctamente
+
+# Crear una nueva columna 'year_month' en formato Date
+final_df <- final_df %>%
+  mutate(year_month = ym(year_month))
+
+# Crear una nueva columna 'cuatrimestre_anio' basada en 'year_month'
+final_df <- final_df %>%
+  mutate(q_year = case_when(
+    month(year_month) %in% c(1, 2, 3, 4) ~ paste0("Q1 ", format(year_month, "%Y")),
+    month(year_month) %in% c(5, 6, 7, 8) ~ paste0("Q2 ", format(year_month, "%Y")),
+    month(year_month) %in% c(9, 10, 11, 12) ~ paste0("Q3 ", format(year_month, "%Y"))
+  ))
+
+# Ordenar las etiquetas en orden cronológico
+final_df <- final_df %>%
+  mutate(q_year = reorder(q_year, year_month))
+```
+
+
+```{r}
+# Crear el gráfico de líneas por cuatrimestres y periódicos
+ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
+  geom_line(stat = "count", position = "identity", size = 0.8) +
+  labs(title = "Number of articles published per quarter and year",
+       subtitle = "2014-2023") +
+  scale_x_discrete(breaks = final_df$q_year[grepl("Q1", final_df$q_year)]) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank(),
+        legend.text = element_text(family = "Times New Roman", size = 11),
+        legend.position = "top",
+        legend.justification = "left",
+        legend.box.margin = margin(l = -12),
+        legend.title = element_blank(),
+        plot.title = element_text(family = "Times New Roman", size = 14, face = "bold"),
+        plot.subtitle = element_text(family = "Times New Roman", size = 12)) +
+  scale_color_brewer(palette = "Dark2") +
+  # geom_vline(xintercept = "Q1 2022", linetype = "dashed", color = "black")
+  geom_segment(aes(x = "Q1 2022", xend = "Q1 2022", y = 0, yend = 125), 
+               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+  geom_segment(aes(x = "Q1 2016", xend = "Q1 2016", y = 0, yend = 125), 
+               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+  annotate("text", x = "Q1 2022", y = 135, label = "Chat-GPT", family = "Times New Roman")
 ```
 
