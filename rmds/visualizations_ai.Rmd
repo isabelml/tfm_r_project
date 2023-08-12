@@ -1,5 +1,5 @@
 ---
-title: "visualizations_ai"
+title: "Visualizations and text analysis"
 author: "Isabel Molero López"
 date: "`r Sys.Date()`"
 output: html_document
@@ -12,9 +12,26 @@ knitr::opts_chunk$set(echo = TRUE)
 # 1. Introduction
 
 # 2. Load libraries
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
+# General libraries
 library(tidyverse)
+
+# To perform text analysis:
+library(stopwords)
+library(tidytext)
+library(textdata)
+library(syuzhet)
+
+# To make plots:
 library(ggplot2)
+library(scales)
+library(ggpubr)
+library(RColorBrewer)
+library(RColorBrewer)
+library(wordcloud)
+library(reshape2)
+library(forcats)
+library(igraph)
 ```
 
 # 3. Read data
@@ -126,3 +143,131 @@ ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
   annotate("text", x = "Q1 2022", y = 135, label = "Chat-GPT", family = "Times New Roman")
 ```
 
+# Text-analysis visualizations
+
+## Take a look to the text
+
+```{r}
+head(final_df %>% filter(newspaper == "elDiario.es") %>%  select(text))
+```
+
+
+```{r}
+head(final_df %>% filter(newspaper == "elmundo.es") %>%  select(text))
+```
+
+## Remove first line in elDiario.es "EFE" news
+
+```{r}
+head(final_df %>% filter(newspaper == "elDiario.es") %>%  select(text))
+```
+
+
+```{r}
+final_df_test <- final_df %>% 
+  filter(!str_detect(text, regex("(EFE).", ignore_case = FALSE)))
+
+final_df_test2 <- final_df %>% 
+  filter(str_detect(text, regex("(EFE).", ignore_case = FALSE))) %>% 
+  mutate(text = sub("^[^.]*\\.", "", text))
+
+# Join the dataframes again
+final_df <- final_df_test %>% 
+  bind_rows(final_df_test2)
+
+rm(final_df_test, final_df_test2)
+
+head(final_df %>% filter(newspaper == "elDiario.es") %>%  select(text))
+```
+
+## Let's break the text into words
+
+```{r}
+tokens <- final_df %>%
+  unnest_tokens(word, text, drop = F, to_lower = T) %>% 
+  # I remove the date column:
+  select(word, date, newspaper, q_year)
+
+tokens
+```
+
+## Filter stop words
+
+Then I eliminate the words that are not useful for the analysis with the 
+"stopwords()" library in Spanish. In addition, I have the word "si" which was 
+not included but which I consider has no value for the analysis.
+
+```{r}
+spanish_stopwords <- stopwords("es")
+
+tokens <- tokens %>% 
+  anti_join(data.frame(word = spanish_stopwords), by = "word") %>% 
+  filter(word != "si")
+
+tokens
+```
+
+## Counting word frequencies
+
+```{r}
+tokens %>%
+  count(word, sort = TRUE) 
+```
+
+### Visualize word frequencies
+
+The following graph shows the frequency of the most repeated words 
+
+```{r}
+tokens %>%
+  count(word, sort = TRUE) %>%
+  #only words mentioned over 1000 times in the speeches
+  filter(n > 2000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col(fill = "#ff5252") +
+  labs(title = "Word frequency in Pedro Sánchez's speeches in the year 2020",
+       caption = "Source: La Moncloa, Intervenciones.",
+    y = NULL,
+    x = "Absolute frequency") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 10.5, hjust = 0.18,
+                                  margin = margin(0, 0, 20, 0)),
+        axis.text.y = element_text(hjust = 0))
+```
+
+### Comparing word frequencies across two different years
+
+```{r}
+library(tidyr)
+
+frequency <- tokens %>% 
+  mutate(word = str_extract(word, "\\b\\p{L}+\\b")) %>%
+  count(newspaper, word) %>%
+  group_by(newspaper) %>%
+  mutate(proportion = n / sum(n)) %>% 
+  filter(n > 15) %>% 
+  select(-n) %>% 
+  pivot_wider(names_from = newspaper, values_from = proportion) %>%
+  pivot_longer(`elDiario.es`,
+               names_to = "newspaper", values_to = "proportion")
+
+frequency
+```
+
+```{r warning=FALSE}
+
+frequency %>% 
+  ggplot(aes(x = proportion, y = `elmundo.es`, 
+                      color = abs(`elmundo.es` - proportion))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 0.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 0.5) +
+  theme_minimal() +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001), 
+                       low = "darkslategray4", high = "gray75") +
+  theme(legend.position="none") +
+  labs(y = "elmundo.es", x = "elDiario.es") 
+```
