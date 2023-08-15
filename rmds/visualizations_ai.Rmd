@@ -226,14 +226,19 @@ tokens %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(n, word)) +
   geom_col(fill = "#ff5252") +
-  labs(title = "Word frequency in Pedro Sánchez's speeches in the year 2020",
-       caption = "Source: La Moncloa, Intervenciones.",
+  labs(title = "Word frequency in articles on artificial intelligence published in elDiario.es",
+       subtitle = "2014-2023",
+       caption = "Source: elDiario.es",
     y = NULL,
-    x = "Absolute frequency") +
+    x = NULL) +
   theme_minimal() +
-  theme(plot.title = element_text(face = "bold", size = 10.5, hjust = 0.18,
-                                  margin = margin(0, 0, 20, 0)),
-        axis.text.y = element_text(hjust = 0))
+  theme(plot.title.position = "plot",
+        plot.title = element_text(family = "Times New Roman", size = 14, face = "bold",
+                                  margin = margin(0, 0, 0, 0)),
+        plot.subtitle = element_text(family = "Times New Roman", size = 12,
+                                     margin = margin(5, 0, 20, 0),),
+        axis.text.y = element_text(hjust = 0, family = "Times New Roman", size = 11,
+                                   colour = "black"))
 ```
 
 ### Comparing word frequencies across two different years
@@ -271,3 +276,8 @@ frequency %>%
   theme(legend.position="none") +
   labs(y = "elmundo.es", x = "elDiario.es") 
 ```
+
+```{r}
+
+```
+
