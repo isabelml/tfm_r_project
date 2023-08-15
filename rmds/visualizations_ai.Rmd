@@ -90,6 +90,20 @@ final_df <- eldiario_all_filter %>%
               mutate(newspaper = "elmundo.es")) 
 ```
 
+### Table
+
+```{r}
+final_df %>% 
+  filter(newspaper == "elDiario.es") %>% 
+  mutate(year = year(date)) %>% 
+  count(year)
+
+final_df %>% 
+  filter(newspaper == "elmundo.es") %>% 
+  mutate(year = year(date)) %>% 
+  count(year)
+```
+
 
 ## Plot:
 
@@ -136,11 +150,23 @@ ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
         plot.subtitle = element_text(family = "Times New Roman", size = 12)) +
   scale_color_brewer(palette = "Dark2") +
   # geom_vline(xintercept = "Q1 2022", linetype = "dashed", color = "black")
-  geom_segment(aes(x = "Q1 2022", xend = "Q1 2022", y = 0, yend = 125), 
+  geom_segment(aes(x = "Q1 2022", xend = "Q1 2022", y = 0, yend = 110), 
                size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
   geom_segment(aes(x = "Q1 2016", xend = "Q1 2016", y = 0, yend = 125), 
                size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
-  annotate("text", x = "Q1 2022", y = 135, label = "Chat-GPT", family = "Times New Roman")
+  geom_segment(aes(x = "Q1 2021", xend = "Q1 2021", y = 0, yend = 125), 
+               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+  geom_segment(aes(x = "Q2 2022", xend = "Q2 2022", y = 0, yend = 130), 
+               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+  geom_segment(aes(x = "Q3 2015", xend = "Q3 2015", y = 0, yend = 125), 
+               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+  annotate("text", x = "Q1 2022", y = 120, label = "ChatGPT   ", family = "Times New Roman") +
+  annotate("text", x = "Q1 2021", y = 135, label = "DALL-E", family = "Times New Roman") +
+  annotate("text", x = "Q2 2022", y = 140, label = "Midjourney", family = "Times New Roman") +
+  annotate("text", x = "Q3 2015", y = 140, label = "AlphaGo \nMETA AI", family = "Times New Roman") 
+
+final_df %>% 
+  count(newspaper, q_year) 
 ```
 
 # Text-analysis visualizations
