@@ -11,6 +11,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # 1. Introduction
 
+This document shows the code needed to create a line graph showing the evolution 
+of the articles published by the two newspapers (El Mundo and elDiario.es) on 
+artificial intelligence from 2014 to 2023. In addition, a text analysis is also 
+performed for which several visualizations are included. The code needed to 
+extract and clean the data used in this file is located in the same GitHub 
+repository.
+
 # 2. Load libraries
 ```{r message=FALSE, warning=FALSE}
 # General libraries
@@ -88,9 +95,11 @@ final_df <- eldiario_all_filter %>%
   mutate(newspaper = "elDiario.es") %>% 
   bind_rows(elmundo_all_filter %>%
               mutate(newspaper = "elmundo.es")) 
+
+final_df <- final_df[!grepl("^https://www.elmundo.es/ofertas-regalos", final_df$link), ]
 ```
 
-### Table
+### Table with the number of articles published by year
 
 ```{r}
 final_df %>% 
@@ -105,7 +114,9 @@ final_df %>%
 ```
 
 
-## Plot:
+## Plot
+
+### Create new column
 
 ```{r}
 library(RColorBrewer)
@@ -130,11 +141,12 @@ final_df <- final_df %>%
   mutate(q_year = reorder(q_year, year_month))
 ```
 
+### Create the plot with ggplot2
 
 ```{r}
 # Crear el gráfico de líneas por cuatrimestres y periódicos
 ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
-  geom_line(stat = "count", position = "identity", size = 0.8) +
+  geom_line(stat = "count", position = "identity", linewidth = 0.8) +
   labs(title = "Number of articles published per quarter and year",
        subtitle = "2014-2023") +
   scale_x_discrete(breaks = final_df$q_year[grepl("Q1", final_df$q_year)]) +
@@ -176,7 +188,6 @@ final_df %>%
 ```{r}
 head(final_df %>% filter(newspaper == "elDiario.es") %>%  select(text))
 ```
-
 
 ```{r}
 head(final_df %>% filter(newspaper == "elmundo.es") %>%  select(text))
@@ -225,10 +236,13 @@ not included but which I consider has no value for the analysis.
 
 ```{r}
 spanish_stopwords <- stopwords("es")
+additional_stopwords <- c("si","ser","inteligencia","artificial","además", "ia", "así", "según",
+                          "cada", "dos", "descuento")
+spanish_stopwords <- c(spanish_stopwords, additional_stopwords)
 
 tokens <- tokens %>% 
   anti_join(data.frame(word = spanish_stopwords), by = "word") %>% 
-  filter(word != "si")
+  filter(word != "si" & word != "ser" & word != "inteligencia" & word != "artificial" & word != "además")
 
 tokens
 ```
@@ -242,19 +256,47 @@ tokens %>%
 
 ### Visualize word frequencies
 
-The following graph shows the frequency of the most repeated words 
+The following graphs shows the frequency of the most repeated words.
+
+#### elDiario.es
 
 ```{r}
 tokens %>%
+  filter(newspaper == "elDiario.es") %>% 
   count(word, sort = TRUE) %>%
   #only words mentioned over 1000 times in the speeches
-  filter(n > 2000) %>%
+  filter(n > 650) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(n, word)) +
   geom_col(fill = "#ff5252") +
   labs(title = "Word frequency in articles on artificial intelligence published in elDiario.es",
        subtitle = "2014-2023",
        caption = "Source: elDiario.es",
+    y = NULL,
+    x = NULL) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        plot.title = element_text(family = "Times New Roman", size = 14, face = "bold",
+                                  margin = margin(0, 0, 0, 0)),
+        plot.subtitle = element_text(family = "Times New Roman", size = 12,
+                                     margin = margin(5, 0, 20, 0),),
+        axis.text.y = element_text(hjust = 0, family = "Times New Roman", size = 11,
+                                   colour = "black"))
+```
+#### El Mundo
+
+```{r}
+tokens %>%
+  filter(newspaper == "elmundo.es") %>% 
+  count(word, sort = TRUE) %>%
+  #only words mentioned over 1000 times in the speeches
+  filter(n > 1000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col(fill = "#ff5252") +
+  labs(title = "Word frequency in articles on artificial intelligence published in elmundo.es",
+       subtitle = "2014-2023",
+       caption = "Source: elmundo.es",
     y = NULL,
     x = NULL) +
   theme_minimal() +
