@@ -79,6 +79,8 @@ min(elmundo_all_filter$date)
 max(eldiario_all_filter$date)
 max(elmundo_all_filter$date)
 ```
+
+
 ```{r}
 eldiario_all_filter <- eldiario_all_filter %>% 
   filter(date >= "2014-07-28") %>% 
@@ -137,11 +139,12 @@ final_df <- final_df %>%
 
 ### Create the plot with ggplot2
 
-```{r}
+```{r fig.height=4.5, fig.width=6.7}
 ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
   geom_line(stat = "count", position = "identity", linewidth = 0.8) +
   labs(title = "Number of articles published per quarter and year",
-       subtitle = "2014-2023") +
+       subtitle = "2014-2023",
+       caption = " Note: the y-axis shows the absolute frequency of news published on the website of each newspaper containing the  \n words 'inteligencia artificial'") +
   scale_x_discrete(breaks = final_df$q_year[grepl("Q1", final_df$q_year)]) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
@@ -151,24 +154,38 @@ ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
         legend.justification = "left",
         legend.box.margin = margin(l = -12),
         legend.title = element_blank(),
-        plot.title = element_text(family = "Times New Roman", size = 14, face = "bold"),
-        plot.subtitle = element_text(family = "Times New Roman", size = 12)) +
+        plot.title = element_text(family = "Times New Roman", size = 14, 
+                                  face = "bold"),
+        plot.subtitle = element_text(family = "Times New Roman", size = 12),
+        plot.caption = element_text(family = "Times New Roman", size = 10,
+                                    hjust = 0, margin = margin(t = 15)),
+        plot.caption.position = "plot") +
   scale_color_brewer(palette = "Dark2") +
   # geom_vline(xintercept = "Q1 2022", linetype = "dashed", color = "black")
   geom_segment(aes(x = "Q1 2022", xend = "Q1 2022", y = 0, yend = 110), 
-               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
-  geom_segment(aes(x = "Q1 2016", xend = "Q1 2016", y = 0, yend = 125), 
-               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+               size = 0.4, linetype = "dashed", colour = "black", alpha = 0.02) +
   geom_segment(aes(x = "Q1 2021", xend = "Q1 2021", y = 0, yend = 125), 
                size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
   geom_segment(aes(x = "Q2 2022", xend = "Q2 2022", y = 0, yend = 130), 
                size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
   geom_segment(aes(x = "Q3 2015", xend = "Q3 2015", y = 0, yend = 125), 
                size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
-  annotate("text", x = "Q1 2022", y = 120, label = "ChatGPT   ", family = "Times New Roman") +
-  annotate("text", x = "Q1 2021", y = 135, label = "DALL-E", family = "Times New Roman") +
-  annotate("text", x = "Q2 2022", y = 140, label = "Midjourney", family = "Times New Roman") +
-  annotate("text", x = "Q3 2015", y = 140, label = "AlphaGo \nMETA AI", family = "Times New Roman") 
+  geom_segment(aes(x = "Q3 2014", xend = "Q3 2014", y = 0, yend = 125), 
+               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+  geom_segment(aes(x = "Q1 2017", xend = "Q1 2017", y = 0, yend = 125), 
+               size = 0.3, linetype = "dashed", colour = "black", alpha = 0.02) +
+  annotate("text", x = "Q1 2022", y = 120, label = "ChatGPT   ", 
+           family = "Times New Roman") +
+  annotate("text", x = "Q1 2021", y = 135, label = "DALL-E", 
+           family = "Times New Roman") +
+  annotate("text", x = "Q2 2022", y = 140, label = "Midjourney", 
+           family = "Times New Roman") +
+  annotate("text", x = "Q3 2015", y = 140, label = "AlphaGo \nMETA AI", 
+           family = "Times New Roman") +
+  annotate("text", x = "Q3 2014", y = 135, label = "Cortana", 
+           family = "Times New Roman") +
+    annotate("text", x = "Q1 2017", y = 135, label = "Libratus", 
+           family = "Times New Roman") 
 
 final_df %>% 
   count(newspaper, q_year) 
@@ -257,12 +274,12 @@ The following graphs shows the frequency of the most repeated words.
 tokens %>%
   filter(newspaper == "elDiario.es") %>% 
   count(word, sort = TRUE) %>%
-  #only words mentioned over 1000 times in the speeches
+  #only words mentioned over 650 times in the speeches
   filter(n > 650) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(n, word)) +
-  geom_col(fill = "#ff5252") +
-  labs(title = "Word frequency in articles on artificial intelligence published in elDiario.es",
+  geom_col(fill = "#EBEF95") +
+  labs(title = "Word frequency in artificial intelligence articles published in eldiario.es",
        subtitle = "2014-2023",
        caption = "Source: elDiario.es",
     y = NULL,
@@ -282,12 +299,12 @@ tokens %>%
 tokens %>%
   filter(newspaper == "elmundo.es") %>% 
   count(word, sort = TRUE) %>%
-  #only words mentioned over 1000 times in the speeches
-  filter(n > 900) %>%
+  #only words mentioned over 925 times in the speeches
+  filter(n > 925) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(n, word)) +
-  geom_col(fill = "#ff5252") +
-  labs(title = "Word frequency in articles on artificial intelligence published in elmundo.es",
+  geom_col(fill = "#EFB495") +
+  labs(title = "Word frequency in artificial intelligence articles published in elmundo.es",
        subtitle = "2014-2023",
        caption = "Source: elmundo.es",
     y = NULL,
