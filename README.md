@@ -1,5 +1,4 @@
-# Master's Thesis
-# Artificial Intelligence in the press: A comparative analysis of ideologically diverse newspapers
+# Master's Thesis. Artificial Intelligence in the press: A comparative analysis of ideologically diverse newspapers
 
 ### Author: Isabel Molero López
 ### Master in Computational Social Science
