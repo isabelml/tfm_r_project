@@ -1,6 +1,6 @@
 ---
 title: "Data cleaning (AI news database)"
-subtitle: "Master Thesis"
+subtitle: "Master´s Thesis. Computational Social Sciences"
 author: "Isabel Molero López"
 date: "Sys.Date()"
 output: html_notebook
@@ -9,10 +9,10 @@ output: html_notebook
 
 # 1. Introduction
 
-This file is the second part of a series of rmds that I am doing for my Master's 
-Thesis. In the previous one ("web-scraping AI articles) I extracted the content 
-of newspaper articles in a csv. Now I am going to read the csv and clean the data
-to be able to perform visualizations and text analysis.
+This file is the second part of a series of rmds files that I am doing for my 
+Master's Thesis. In the previous one ("web-scraping AI articles) I extracted the
+content of digital newspaper articles in a csv. Now I am going to read the csv
+and clean the data to be able to perform visualizations and text analysis.
 
 # 2. Load libraries
 
@@ -57,7 +57,9 @@ Now I am going to remove the dataframes that I am not going to use.
 ```{r}
 rm(st = ai_eldiario_row, ai_elmundo_row, text_eldiario_row, text_elmundo_row)
 ```
-## join with the dataframe with the NAs
+
+## Join with the dataframe with the NA values
+
 ```{r}
 # read the dataframe
 elmundo_df_nas <- read_csv("../data/elmundo_df_nas.csv")
@@ -82,6 +84,8 @@ rm(elmundo_all_row_nas, elmundo_df_nas)
 
 ## Date
 
+Next I am going to transform the dates to a format suitable for R.
+
 ```{r}
 eldiario_all <- eldiario_all_row %>%
   mutate(date = str_split(date, " - ", simplify = TRUE)[, 1]) %>%
@@ -104,6 +108,7 @@ elmundo_all <- elmundo_all_row %>%
   mutate(date = ymd_hms(date, tz = "UTC"),
          date = ymd(format(date, "%Y-%m-%d")))
 ```
+
 # 6. Save the dataframes
 
 ```{r}

@@ -1,8 +1,10 @@
 ---
 title: "Visualizations and text analysis"
+subtitle: "Master´s Thesis. Computational Social Sciences"
 author: "Isabel Molero López"
-date: "`r Sys.Date()`"
-output: html_document
+date: "Sys.Date()"
+output: html_notebook
+  toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -12,13 +14,14 @@ knitr::opts_chunk$set(echo = TRUE)
 # 1. Introduction
 
 This document shows the code needed to create a line graph showing the evolution 
-of the articles published by the two newspapers (El Mundo and elDiario.es) on 
+of the articles published by two digital newspapers (El Mundo and elDiario.es) on 
 artificial intelligence from 2014 to 2023. In addition, a text analysis is also 
 performed for which several visualizations are included. The code needed to 
 extract and clean the data used in this file is located in the same GitHub 
 repository.
 
 # 2. Load libraries
+
 ```{r message=FALSE, warning=FALSE}
 # General libraries
 library(tidyverse)
@@ -70,16 +73,16 @@ elmundo_all_filter <- elmundo_all %>%
 ## Clean dates
 
 Now I am going to set the same minimum and maximum date of publication of 
-articles for both datasets:
+articles for both data sets:
 
 ```{r}
+# Check max and min dates for both datasets:
 min(eldiario_all_filter$date)
 min(elmundo_all_filter$date)
 
 max(eldiario_all_filter$date)
 max(elmundo_all_filter$date)
 ```
-
 
 ```{r}
 eldiario_all_filter <- eldiario_all_filter %>% 
@@ -98,17 +101,22 @@ final_df <- eldiario_all_filter %>%
   bind_rows(elmundo_all_filter %>%
               mutate(newspaper = "elmundo.es")) 
 
+# Remove some rows that correspond to advertisements:
 final_df <- final_df[!grepl("^https://www.elmundo.es/ofertas-regalos", final_df$link), ]
 ```
 
 ### Table with the number of articles published by year
 
 ```{r}
+# Sample of news articles by year and newspaper
+
+# eldiario.es:
 final_df %>% 
   filter(newspaper == "elDiario.es") %>% 
   mutate(year = year(date)) %>% 
   count(year)
 
+# elmundo.es:
 final_df %>% 
   filter(newspaper == "elmundo.es") %>% 
   mutate(year = year(date)) %>% 
@@ -118,14 +126,16 @@ final_df %>%
 
 ## Plot
 
-### Create new column
+### Create new column with the quarterly period
 
 ```{r}
 library(RColorBrewer)
 
+# New date column only with year and month:
 final_df <- final_df %>%
   mutate(year_month = ym(year_month))
 
+# New column with the four-month period:
 final_df <- final_df %>%
   mutate(q_year = case_when(
     month(year_month) %in% c(1, 2, 3, 4) ~ paste0("Q1 ", format(year_month, "%Y")),
@@ -133,13 +143,14 @@ final_df <- final_df %>%
     month(year_month) %in% c(9, 10, 11, 12) ~ paste0("Q3 ", format(year_month, "%Y"))
   ))
 
+# Order the year and month:
 final_df <- final_df %>%
   mutate(q_year = reorder(q_year, year_month))
 ```
 
 ### Create the plot with ggplot2
 
-```{r fig.height=4.5, fig.width=6.7}
+```{r fig.height=4.5, fig.width=6.7, warning=FALSE}
 ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
   geom_line(stat = "count", position = "identity", linewidth = 0.8) +
   labs(title = "Number of articles published per quarter and year",
@@ -185,8 +196,11 @@ ggplot(final_df, aes(x = q_year, group = newspaper, color = newspaper)) +
   annotate("text", x = "Q3 2014", y = 135, label = "Cortana", 
            family = "Times New Roman") +
     annotate("text", x = "Q1 2017", y = 135, label = "Libratus", 
-           family = "Times New Roman") 
+           family = "Times New Roman")
+```
 
+```{r}
+# Frequency table by newspaper and quarter
 final_df %>% 
   count(newspaper, q_year) 
 ```
@@ -205,6 +219,8 @@ head(final_df %>% filter(newspaper == "elmundo.es") %>%  select(text))
 
 ## Remove first line in elDiario.es "EFE" news
 
+E.g: "\n Caracas, 27 abr (EFE).-"
+
 ```{r}
 head(final_df %>% filter(newspaper == "elDiario.es") %>%  select(text))
 ```
@@ -218,7 +234,7 @@ final_df_test2 <- final_df %>%
   filter(str_detect(text, regex("(EFE).", ignore_case = FALSE))) %>% 
   mutate(text = sub("^[^.]*\\.", "", text))
 
-# Join the dataframes again
+# Join the dataframes again:
 final_df <- final_df_test %>% 
   bind_rows(final_df_test2)
 
@@ -240,9 +256,10 @@ tokens
 
 ## Filter stop words
 
-Then I eliminate the words that are not useful for the analysis with the 
-"stopwords()" library in Spanish. In addition, I have the word "si" which was 
-not included but which I consider has no value for the analysis.
+Then I remove the words that are not useful for the analysis with the 
+"stopwords()" library in Spanish. In addition, I have removed other words that 
+were not included in this vector but which I consider have no value for the 
+analysis.
 
 ```{r}
 spanish_stopwords <- stopwords("es")
@@ -279,7 +296,7 @@ tokens %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(n, word)) +
   geom_col(fill = "#EBEF95") +
-  labs(title = "Word frequency in artificial intelligence articles published in eldiario.es",
+  labs(title = "Word frequency in artificial intelligence articles published by eldiario.es",
        subtitle = "2014-2023",
        caption = "Source: elDiario.es",
     y = NULL,
@@ -293,6 +310,7 @@ tokens %>%
         axis.text.y = element_text(hjust = 0, family = "Times New Roman", size = 11,
                                    colour = "black"))
 ```
+
 #### El Mundo
 
 ```{r}
@@ -304,7 +322,7 @@ tokens %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(n, word)) +
   geom_col(fill = "#EFB495") +
-  labs(title = "Word frequency in artificial intelligence articles published in elmundo.es",
+  labs(title = "Word frequency in artificial intelligence articles published by elmundo.es",
        subtitle = "2014-2023",
        caption = "Source: elmundo.es",
     y = NULL,
@@ -339,7 +357,7 @@ frequency
 ```
 
 ```{r warning=FALSE}
-
+# Create a plot comparing word frequencies:
 frequency %>% 
   ggplot(aes(x = proportion, y = `elmundo.es`, 
                       color = abs(`elmundo.es` - proportion))) +
@@ -357,12 +375,12 @@ frequency %>%
 
 ### Calculating correlation
 
-Now I am going to quantify how similar are both datasets (elDiario.es and El Mundo) with
-the Pearson correlation coefficient. 
+Now I am going to quantify how similar are both datasets (elDiario.es and El 
+Mundo) with the Pearson correlation coefficient. 
 
 The correlation coefficient between the texts of both newspapers shows that they
 are very similar. The coefficient gives 0.97, which indicates that they are not 
-identical but very similar. 
+identical but semantically very similar. 
 
 ```{r}
 frequency <- tokens %>% 
@@ -378,9 +396,10 @@ frequency <- tokens %>%
 cor.test(data = frequency[frequency$newspaper == "elDiario.es",],
          ~ proportion + `elmundo.es`)
 ```
+
 ## Sentiment analysis
 
-In this section I will conduct a sentiment analysis of the speeches. 
+In this section I will conduct a sentiment analysis of the news articles. 
 
 To do the sentiment analysis I first download the NRC lexicon in Spanish from the
 following website: https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm
@@ -397,14 +416,16 @@ sentiment_spanish_nrc <- readxl::read_xlsx("../data/nrc_spanish.xlsx") %>%
   select(-value) %>% 
   rename(word = 'Spanish Word') 
 
-# To see the sentiments that include NRC lexicon: 
+# To view the sentiments that include NRC lexicon: 
 unique(sentiment_spanish_nrc$sentiment) 
 ```
-### Visualization of the eight sentiments in elDiario.es articles
 
-```{r fig.width= 5.5, fig.height=6}
+### Visualization of the eight sentiments included in NRC lexicon
+
+```{r fig.width= 5.5, fig.height=6, warning=FALSE}
 my_palette <- brewer.pal(8, "Set1")
 
+# eldiario.es:
 sentiment_eldiario <- tokens %>%
   filter(newspaper == "elDiario.es") %>% 
   inner_join(sentiment_spanish_nrc, by = "word") %>%
@@ -424,6 +445,7 @@ sentiment_eldiario <- tokens %>%
         axis.text.x = element_text(size = 8.5, face = "bold", color = "black")) +
   scale_fill_manual(values = my_palette)
 
+# elmundo.es:
 sentiment_elmundo <- tokens %>%
   filter(newspaper == "elmundo.es") %>% 
   inner_join(sentiment_spanish_nrc, by = "word") %>%
@@ -448,41 +470,42 @@ ggarrange(sentiment_eldiario, NULL, sentiment_elmundo,
   
 ```
 
-### Trust words in the articles: NRC lexicon
+### Fear words in the articles: NRC lexicon
 
-I want to analyze the use of words of anticipation used in the articles.
+I want to analyze the use of words of fear used in the articles.
 
 First I filter in the dataframe created before with the NRC lexicon the words 
-classified with the sentiment "anticipation".
+classified with the sentiment "fear".
 
 ```{r}
-trust_words <- sentiment_spanish_nrc %>% 
+fear_words <- sentiment_spanish_nrc %>% 
   filter(sentiment == "fear")
 
-trust_words
+# Visualize the new dataframe:
+head(fear_words)
 ```
 
-Then I put it together with the dataframe of the tokenized speeches and count the
-frequency of each word. In the following dataframe they are sorted from most to 
+Then I put it together with the dataframe of the tokenized news articles and count 
+the frequency of each word. In the following dataframe they are sorted from most to 
 least frequent.
 
-```{r}
-np_trust_words <- tokens %>%
-    inner_join(trust_words, by = "word") %>%
+```{r warning=FALSE}
+np_fear_words <- tokens %>%
+    inner_join(fear_words, by = "word") %>%
     count(word, sort = TRUE)
 
-np_trust_words
+head(np_fear_words)
 ```
 
-### Visualization of fear words comparing elDiario.es and El Mundo
+### Visualization of fear words comparing elDiario.es and elmundo.es
 
-```{r fig.width=8}
+```{r fig.width=8, warning=FALSE}
 exclude_words <- c("caso", "grupo", "embargo", "contenido", "peso", "llevar", "granada")
 
 plot_eldiario <- tokens %>%
   filter(newspaper == "elDiario.es") %>%
     filter(!word %in% exclude_words) %>%
-    inner_join(trust_words, by = "word") %>%
+    inner_join(fear_words, by = "word") %>%
     count(word, sort = TRUE) %>%
     mutate(word_dif = case_when(word %in% c("peligro", "consejero", "defensa") ~ T,
                                            T ~ F)) %>% 
@@ -506,7 +529,7 @@ plot_eldiario <- tokens %>%
 plot_elmundo <- tokens %>%
   filter(newspaper == "elmundo.es") %>% 
   filter(!word %in% exclude_words) %>% 
-    inner_join(trust_words, by = "word") %>%
+    inner_join(fear_words, by = "word") %>%
     count(word, sort = TRUE) %>%
     mutate(word_dif = case_when(word %in% c("falta", "dinero", "amenaza") ~ T,
                                            T ~ F)) %>% 
@@ -528,79 +551,9 @@ plot_elmundo <- tokens %>%
 ggarrange(plot_eldiario, plot_elmundo)
 ```
 
-
-### Afinn lexicon
-
-In order to use the AFINN lexicon in Spanish, I have first downloaded it (see code). 
-This chunk is not executable since the csv will be read later.
-
-```{r}
-# download.file("https://raw.githubusercontent.com/jboscomendoza/rpubs/master/sentimientos_afinn/lexico_afinn.en.es.csv",
-#               "lexico_afinn.en.es.csv")
-```
-
-Let's prepare the lexicon to use it:
-
-```{r}
- afinn <- read.csv("../data/lexico_afinn.en.es.csv", stringsAsFactors = F, fileEncoding = "latin1") %>% 
-  tbl_df() %>% 
-  rename(word = Palabra,
-         value = Puntuacion) %>% 
-  select(-Word)
-
-head(afinn)
-```
-I am going to create a estimate of the net sentiment (sum of values) in 
-each month for AFINN sentiment lexicon. Let's look at them:
-
-```{r}
-afinn_eldiario <- tokens %>% 
-  filter(newspaper == "elDiario.es") %>% 
-  inner_join(afinn, by = "word") %>% 
-  mutate(year = year(date)) %>% 
-  group_by(year) %>% 
-  summarise(sentiment = sum(value))
-
-afinn_eldiario
-
-afinn_elmundo <- tokens %>% 
-  filter(newspaper == "elmundo.es") %>% 
-  inner_join(afinn, by = "word") %>% 
-  mutate(year = year(date)) %>% 
-  group_by(year) %>% 
-  summarise(sentiment = sum(value))
-
-afinn_elmundo
-```
-
-```{r}
-afinn_eldiario %>% 
-    # mutate(month = factor(as.factor(month), levels = c("January",
-    #                                                  "February", "March",
-    #                                                  "April", "May", "June",
-    #                                                  "July", "August", "September",
-    #                                                  "October", "November", 
-    #                                                  "December"))) %>%
-  ggplot(aes(year, sentiment)) +
-  geom_col(show.legend = FALSE) +
-  theme_minimal()
-
-afinn_elmundo %>% 
-    # mutate(month = factor(as.factor(month), levels = c("January",
-    #                                                  "February", "March",
-    #                                                  "April", "May", "June",
-    #                                                  "July", "August", "September",
-    #                                                  "October", "November", 
-    #                                                  "December"))) %>%
-  ggplot(aes(year, sentiment)) +
-  geom_col(show.legend = FALSE) +
-  theme_minimal()
-```
-
 ### Wordclouds
 
-Finally, I want to see the most repeated words in the articles
-in a word cloud.
+Finally, I want to see the most repeated words in the articles in a word cloud.
 
 ```{r fig.height=9, fig.width=9}
 colors = brewer.pal(8, 'Dark2')
