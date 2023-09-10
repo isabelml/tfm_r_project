@@ -9,6 +9,8 @@ This Master's thesis repository contains the code needed to do the analysis of a
 
 To use the code in this project you will need to have installed R and RStudio.  
 
+
+
 ![imagen](https://github.com/isabelml/tfm_r_project/assets/113594617/6c78e0df-26df-4a2d-95cf-c4b768ec24cc)
 
 ## Installation instructions: the Docker
