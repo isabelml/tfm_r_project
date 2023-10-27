@@ -47,6 +47,6 @@ In this project you will find three RMD files with all the code needed to perfor
 - **Images**. Folder with images used to illustrate part of the process.
 
 ### Contact information
-- Isabel Molero - github.com/isabelml. **Student of Master in Computational Social Science.**
+- Isabel Molero - github.com/isabelml. **Master in Computational Social Science.**
 
 
